@@ -385,9 +385,9 @@ void CNetSnifferDlg::OnCbnSelchangeCombo2()
 	m_comboBoxRule.GetWindowText(str_rule);
 	// 设置当前处理的dev
 	auto rule = CString2string(str_rule);
-	auto curDev = m_snifferGrab.adapterName2dev(CString2string(str_rule));
+	//auto curDev = m_snifferGrab.adapterName2dev(CString2string(str_rule));
 	// 将选择结果传给后端
-	m_snifferGrab.setChoosedIf(curDev);
+	//m_snifferGrab.setChoosedIf(curDev);
 	m_snifferGrab.setChoosedRule(rule);
 	printf("CURRENT CHOOSED RULE: %s\n\n\n\n\n\n", rule.c_str());
 //
