@@ -45,6 +45,9 @@
     <ClInclude Include="FrameDef.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="FrameParser.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="NetSniffer.cpp">
@@ -66,6 +69,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="FrameDef.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="FrameParser.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

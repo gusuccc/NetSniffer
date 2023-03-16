@@ -70,6 +70,24 @@ void CNetSnifferDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
 	DDX_Control(pDX, IDC_COMBO1, m_comboBox);
+	DDX_Control(pDX, IDC_EDIT2, m_editTCP);
+	DDX_Control(pDX, IDC_EDIT5, m_editUDP);
+	DDX_Control(pDX, IDC_EDIT3, m_editICMP);
+	DDX_Control(pDX, IDC_EDIT6, m_editHTTP);
+	DDX_Control(pDX, IDC_EDIT4, m_editARP);
+	DDX_Control(pDX, IDC_EDIT7, m_editICMPv6);
+	DDX_Control(pDX, IDC_EDIT8, m_editIPv4);
+	DDX_Control(pDX, IDC_EDIT9, m_editIPv6);
+	DDX_Control(pDX, IDC_EDIT10, m_editOther);
+	DDX_Control(pDX, IDC_EDIT11, m_editSum);
+	DDX_Control(pDX, IDC_LIST1, m_listCtrl);
+	DDX_Control(pDX, IDC_TREE1, m_treeCtrl);
+	DDX_Control(pDX, IDC_EDIT1, m_edit);
+	DDX_Control(pDX, IDC_BUTTON1, m_buttonStart);
+	DDX_Control(pDX, IDC_BUTTON2, m_buttonStop);
+	DDX_Control(pDX, IDC_BUTTON3, m_buttonSave);
+	DDX_Control(pDX, IDC_BUTTON4, m_buttonRead);
+	DDX_Control(pDX, IDC_COMBO2, m_comboBoxRule);
 }
 
 BEGIN_MESSAGE_MAP(CNetSnifferDlg, CDialogEx)
@@ -77,6 +95,8 @@ BEGIN_MESSAGE_MAP(CNetSnifferDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	ON_CBN_SELCHANGE(IDC_COMBO1, &CNetSnifferDlg::OnCbnSelchangeCombo1)
+	ON_BN_CLICKED(IDC_BUTTON1, &CNetSnifferDlg::OnBnClickedButton1)
+	ON_CBN_SELCHANGE(IDC_COMBO2, &CNetSnifferDlg::OnCbnSelchangeCombo2)
 END_MESSAGE_MAP()
 
 
@@ -114,33 +134,33 @@ BOOL CNetSnifferDlg::OnInitDialog()
 	// TODO: 在此添加额外的初始化代码
 
 
-	// TODO: 优化添加column的代码
-	//m_listCtrl.SetExtendedStyle(LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
-	//m_listCtrl.InsertColumn(0, _T("编号"), 2, 80); //1表示右，2表示中，3表示左
-	//m_listCtrl.InsertColumn(1, _T("时间"), 2, 260);
-	//m_listCtrl.InsertColumn(2, _T("长度"), 2, 90);
-	//m_listCtrl.InsertColumn(3, _T("源MAC地址"), 2, 220);
-	//m_listCtrl.InsertColumn(4, _T("目标MAC地址"), 2, 220);
-	//m_listCtrl.InsertColumn(5, _T("协议"), 2, 90);
-	//m_listCtrl.InsertColumn(6, _T("源IP地址"), 2, 220);
-	//m_listCtrl.InsertColumn(7, _T("目标IP地址"), 2, 220);
+	// 初始化列表参数，设置表头
+	m_listCtrl.SetExtendedStyle(LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
+	m_listCtrl.InsertColumn(0, _T("编号"), 2, 80); //1表示右，2表示中，3表示左
+	m_listCtrl.InsertColumn(1, _T("时间"), 2, 260);
+	m_listCtrl.InsertColumn(2, _T("长度"), 2, 90);
+	m_listCtrl.InsertColumn(3, _T("源MAC地址"), 2, 220);
+	m_listCtrl.InsertColumn(4, _T("目标MAC地址"), 2, 220);
+	m_listCtrl.InsertColumn(5, _T("协议"), 2, 90);
+	m_listCtrl.InsertColumn(6, _T("源IP地址"), 2, 220);
+	m_listCtrl.InsertColumn(7, _T("目标IP地址"), 2, 220);
 
+	// 网卡列表初始化
 	m_comboBox.AddString(_T("请选择一个网卡接口（必选）"));
 	m_comboBox.SetCurSel(0);
-	//m_comboBoxRule.AddString(_T("请选择过滤规则（可选）"));
-
-	//m_comboBoxRule.SetCurSel(0);
-
-	//m_comboBoxRule.AddString(_T("ether"));
-	//m_comboBoxRule.AddString(_T("tr"));
-	//m_comboBoxRule.AddString(_T("ip"));
-	//m_comboBoxRule.AddString(_T("ip6"));
-	//m_comboBoxRule.AddString(_T("arp"));
-	//m_comboBoxRule.AddString(_T("rarp"));
-	//m_comboBoxRule.AddString(_T("decnet"));
-	//m_comboBoxRule.AddString(_T("tcp"));
-	//m_comboBoxRule.AddString(_T("udp"));
-	//m_comboBoxRule.AddString(_T("xxx"));
+	// 过滤规则列表初始化
+	m_comboBoxRule.AddString(_T("请选择过滤规则（可选）"));
+	m_comboBoxRule.SetCurSel(0);
+	m_comboBoxRule.AddString(_T("ether"));
+	m_comboBoxRule.AddString(_T("tr"));
+	m_comboBoxRule.AddString(_T("ip"));
+	m_comboBoxRule.AddString(_T("ip6"));
+	m_comboBoxRule.AddString(_T("arp"));
+	m_comboBoxRule.AddString(_T("rarp"));
+	m_comboBoxRule.AddString(_T("decnet"));
+	m_comboBoxRule.AddString(_T("tcp"));
+	m_comboBoxRule.AddString(_T("udp"));
+	m_comboBoxRule.AddString(_T("xxx"));
 
 	//m_CMyEdit.setPrompt();
 
@@ -215,6 +235,13 @@ HCURSOR CNetSnifferDlg::OnQueryDragIcon()
 }
 
 
+// Gui界面数据更新, 被snifferCore主动调用
+void CNetSnifferDlg::UpdateGui(const pktCount* npkt, const datapkt* hdrspack)
+{
+	this->update_listCtrl(npkt, hdrspack);
+	this->updateNPacket(npkt);
+}
+
 //网卡下拉框
 void CNetSnifferDlg::OnCbnSelchangeCombo1()
 {
@@ -233,4 +260,135 @@ void CNetSnifferDlg::OnCbnSelchangeCombo1()
 		//assert(std::string(m_snifferCore.getChoosedIf()->description) == CString2string(selText));
 		ASSERT(std::string(m_snifferGrab.getChoosedIf()->description) == CString2string(selText));
 	}
+}
+
+// 开始抓包
+void CNetSnifferDlg::OnBnClickedButton1()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	// 计数统计重置
+	pktCount pktcnt;
+	CNetSnifferDlg::updateNPacket(&pktcnt);
+
+
+	// 列表Item重新计数
+	m_listCtrl.DeleteAllItems();
+	m_snifferGrab.setnpkt(1);
+	int status = m_snifferGrab.snif_startCap();
+	if (status == -1) {
+		printf("Error in snif_startCap\n");
+		return;
+	}
+
+	m_comboBox.EnableWindow(FALSE);
+	m_comboBoxRule.EnableWindow(FALSE);
+	m_buttonStart.EnableWindow(FALSE);
+	m_buttonStop.EnableWindow(TRUE);
+	m_buttonRead.EnableWindow(FALSE);
+	m_buttonSave.EnableWindow(FALSE);
+}
+
+void CNetSnifferDlg::updateNPacket(const pktCount* npkt)
+{
+	CString buf;
+	buf.Format(_T("%d"), npkt->n_sum);
+	this->m_editSum.SetWindowText(buf);
+
+	buf.Format(_T("%d"), npkt->n_arp);
+	this->m_editARP.SetWindowText(buf);
+
+	buf.Format(_T("%d"), npkt->n_http);
+	this->m_editHTTP.SetWindowText(buf);
+
+	buf.Format(_T("%d"), npkt->n_icmp);
+	this->m_editICMP.SetWindowText(buf);
+
+	buf.Format(_T("%d"), npkt->n_icmp6);
+	this->m_editICMPv6.SetWindowText(buf);
+
+	buf.Format(_T("%d"), npkt->n_ip);
+	this->m_editIPv4.SetWindowText(buf);
+
+	buf.Format(_T("%d"), npkt->n_ip6);
+	this->m_editIPv6.SetWindowText(buf);
+
+	buf.Format(_T("%d"), npkt->n_tcp);
+	this->m_editTCP.SetWindowText(buf);
+
+	buf.Format(_T("%d"), npkt->n_udp);
+	this->m_editUDP.SetWindowText(buf);
+
+	buf.Format(_T("%d"), npkt->n_other);
+	this->m_editOther.SetWindowText(buf);
+}
+
+// 更新数据帧列表（中间大表格）
+void CNetSnifferDlg::update_listCtrl(const pktCount* npkt, const datapkt* hdrsPack)
+{
+	char strbuf[32];
+	CString num, ts, len, s_mac, d_mac, proto, s_ip, d_ip;
+	u_char* mac_arr;
+	num.Format(_T("%d"), m_snifferGrab.getnpkt());
+	len.Format(_T("%d"), hdrsPack->pcaph->len);
+	mac_arr = hdrsPack->ethh->s_mac;
+	s_mac.Format(_T("%02x:%02x:%02x:%02x:%02x:%02x"), mac_arr[0], mac_arr[1], mac_arr[2], mac_arr[3], mac_arr[4], mac_arr[5]);
+	mac_arr = hdrsPack->ethh->d_mac;
+	d_mac.Format(_T("%02x:%02x:%02x:%02x:%02x:%02x"), mac_arr[0], mac_arr[1], mac_arr[2], mac_arr[3], mac_arr[4], mac_arr[5]);
+	proto.Format(_T("%S"), hdrsPack->pktType);
+
+	// ts
+	/* convert the timestamp to readable format*/
+	struct tm* ltime;
+	time_t t = hdrsPack->pcaph->ts.tv_sec;
+	ltime = localtime(&t);
+	strftime(strbuf, sizeof(strbuf), "%Y/%m/%d %H:%M:%S", ltime);
+	ts = CString(strbuf);
+	//// ip
+	auto code = ntohs(hdrsPack->ethh->proto);
+	if (code == ETH_PROTOCOL_ARP) {
+		s_ip.Format(_T("%d.%d.%d.%d"), hdrsPack->arph->saddr.byte1, hdrsPack->arph->saddr.byte2, hdrsPack->arph->saddr.byte3, hdrsPack->arph->saddr.byte4);
+		d_ip.Format(_T("%d.%d.%d.%d"), hdrsPack->arph->daddr.byte1, hdrsPack->arph->daddr.byte2, hdrsPack->arph->daddr.byte3, hdrsPack->arph->daddr.byte4);
+	}
+	else if (code == ETH_PROTOCOL_IP) {
+		struct in_addr ip;
+		ip.S_un.S_addr = *((u_long*)(void*)(&hdrsPack->iph->saddr));
+		s_ip = CString(inet_ntoa(ip));
+		ip.S_un.S_addr = *((u_long*)(void*)(&hdrsPack->iph->daddr));
+		d_ip = CString(inet_ntoa(ip));
+	}
+	else if (code == ETH_PROTOCOL_IPV6) {
+		for (int i = 0; i < 7; i++) {
+			s_ip.AppendFormat(_T("%02x:", hdrsPack->iph6->saddr[i]));
+			d_ip.AppendFormat(_T("%02x:", hdrsPack->iph6->daddr[i]));
+		}
+		s_ip.AppendFormat(_T("%02x", hdrsPack->iph6->saddr[7]));
+		d_ip.AppendFormat(_T("%02x", hdrsPack->iph6->daddr[7]));
+	}
+	// ListControl
+	int nitem = m_listCtrl.InsertItem(m_snifferGrab.getnpkt(), num);
+	m_listCtrl.SetItemText(nitem, 1, ts);
+	m_listCtrl.SetItemText(nitem, 2, len);
+	m_listCtrl.SetItemText(nitem, 3, s_mac);
+	m_listCtrl.SetItemText(nitem, 4, d_mac);
+	m_listCtrl.SetItemText(nitem, 5, proto);
+	m_listCtrl.SetItemText(nitem, 6, s_ip);
+	m_listCtrl.SetItemText(nitem, 7, d_ip);
+
+}
+
+// 过滤规则下拉框
+void CNetSnifferDlg::OnCbnSelchangeCombo2()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	CString str_rule;
+	//m_comboBox.GetWindowText(selText);
+	m_comboBoxRule.GetWindowText(str_rule);
+	// 设置当前处理的dev
+	auto rule = CString2string(str_rule);
+	auto curDev = m_snifferGrab.adapterName2dev(CString2string(str_rule));
+	// 将选择结果传给后端
+	m_snifferGrab.setChoosedIf(curDev);
+	m_snifferGrab.setChoosedRule(rule);
+	printf("CURRENT CHOOSED RULE: %s\n\n\n\n\n\n", rule.c_str());
+//
 }

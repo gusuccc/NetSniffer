@@ -1,6 +1,6 @@
 #pragma once
 /*
-* 工具类
+* 工具类，用于分析数据帧
 */
 
 #include "stdafx.h"

@@ -38,9 +38,44 @@ protected:
 	afx_msg HCURSOR OnQueryDragIcon();
 	DECLARE_MESSAGE_MAP()
 public:
-	// 网卡下拉列表
-	CComboBox m_comboBox;
 	// 抓包分析类（Core)
 	SnifferGrab m_snifferGrab;
-	afx_msg void OnCbnSelchangeCombo1();
+	void UpdateGui(const pktCount* npkt, const datapkt* hdrspack);
+	afx_msg void OnCbnSelchangeCombo1();// 网卡下拉框
+	afx_msg void OnBnClickedButton1();
+
+// 界面数据更新相关
+private:
+	void updateNPacket(const pktCount* npkt);
+	void update_listCtrl(const pktCount* npkt, const datapkt* hdrsPack);
+	void updateTree(int index, const pktCount* npkt, const datapkt* hdrsPack);
+	void updateEdit(datapkt* hdrsPack);
+public:
+// 网卡下拉列表
+	CComboBox m_comboBox;
+// 统计数据
+	CEdit m_editTCP;
+	CEdit m_editUDP;
+	CEdit m_editICMP;
+	CEdit m_editHTTP;
+	CEdit m_editARP;
+	CEdit m_editICMPv6;
+	CEdit m_editIPv4;
+	CEdit m_editIPv6;
+	CEdit m_editOther;
+	CEdit m_editSum;
+// 数据包列表
+	CListCtrl m_listCtrl;
+// 树状分析
+	CTreeCtrl m_treeCtrl;
+// 数据包详情
+	CEdit m_edit;
+// 开始，结束，保存，读取
+	CButton m_buttonStart;
+	CButton m_buttonStop;
+	CButton m_buttonSave;
+	CButton m_buttonRead;
+//规则过滤列表
+	CComboBox m_comboBoxRule;
+	afx_msg void OnCbnSelchangeCombo2();
 };

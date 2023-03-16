@@ -187,6 +187,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="FrameDef.h" />
+    <ClInclude Include="FrameParser.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="NetSniffer.h" />
     <ClInclude Include="NetSnifferDlg.h" />
@@ -199,6 +200,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="FrameDef.cpp" />
+    <ClCompile Include="FrameParser.cpp" />
     <ClCompile Include="NetSniffer.cpp" />
     <ClCompile Include="NetSnifferDlg.cpp" />
     <ClCompile Include="pch.cpp">
