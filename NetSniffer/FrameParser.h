@@ -31,6 +31,7 @@ public:
 	const pair<pktCount, headerPack>& getAt(int idx);
 	pktCount getStatistics();
 	headerPack getParsedHeaderPack();
+	vector<pair<pktCount, headerPack>> getParesSet();
 
 private:
 	//  ‰»Î

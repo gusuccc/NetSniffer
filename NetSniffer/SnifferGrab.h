@@ -38,9 +38,8 @@ public:
 	string getChoosedRule(); //获取过滤规则
 	int m_snif_CreateCapThread();  // 新建抓包线程
 
-
 	//文件转储相关
-	pcap_dumper_t* getDumper() const;
+	pcap_dumper_t* getDumper() const;//获取转储程序
 	const char* getDefaltDumpFilePath() const;
 
 private:
@@ -79,6 +78,8 @@ private:
 	// dump 存储 
 	pcap_dumper_t* dumpfile;
 	const char* default_dump_file = "./data_dump";
+
+public:
 	// 数据帧解析
 	DataParser data_parser;
 };

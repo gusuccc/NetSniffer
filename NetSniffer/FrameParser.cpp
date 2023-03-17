@@ -22,7 +22,7 @@ DataParser::DataParser(const u_char* pkt_data, PKTHDR* pkt_header) : m_pkt_data(
 	memset(&this->m_hdr_pack, 0, sizeof(decltype(this->m_hdr_pack)));
 }
 
-// 解析ETH头，剩下的交给下一层处理
+// 解析ETH头，剩下的交给下一层处理（调用）
 int DataParser::parse()
 {
 	//保存Winpcap给的头部信息(拷贝一份）
@@ -203,4 +203,9 @@ pktCount DataParser::getStatistics() {
 }
 headerPack DataParser::getParsedHeaderPack() {
 	return m_hdr_pack;
+}
+
+vector<pair<pktCount, headerPack>> DataParser::getParesSet()
+{
+	return m_idx2data;
 }

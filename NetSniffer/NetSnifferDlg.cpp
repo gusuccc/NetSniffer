@@ -88,6 +88,7 @@ void CNetSnifferDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_BUTTON3, m_buttonSave);
 	DDX_Control(pDX, IDC_BUTTON4, m_buttonRead);
 	DDX_Control(pDX, IDC_COMBO2, m_comboBoxRule);
+	DDX_Control(pDX, IDC_BUTTON5, m_buttonSift);
 }
 
 BEGIN_MESSAGE_MAP(CNetSnifferDlg, CDialogEx)
@@ -97,6 +98,11 @@ BEGIN_MESSAGE_MAP(CNetSnifferDlg, CDialogEx)
 	ON_CBN_SELCHANGE(IDC_COMBO1, &CNetSnifferDlg::OnCbnSelchangeCombo1)
 	ON_BN_CLICKED(IDC_BUTTON1, &CNetSnifferDlg::OnBnClickedButton1)
 	ON_CBN_SELCHANGE(IDC_COMBO2, &CNetSnifferDlg::OnCbnSelchangeCombo2)
+	ON_BN_CLICKED(IDC_BUTTON2, &CNetSnifferDlg::OnBnClickedButton2)
+	ON_BN_CLICKED(IDC_BUTTON5, &CNetSnifferDlg::OnBnClickedButton5)
+	ON_NOTIFY(TVN_SELCHANGED, IDC_TREE1, &CNetSnifferDlg::OnTvnSelchangedTree1)
+	ON_NOTIFY(LVN_ITEMCHANGED, IDC_LIST1, &CNetSnifferDlg::OnLvnItemchangedList1)
+	ON_NOTIFY(NM_CUSTOMDRAW, IDC_LIST1, &CNetSnifferDlg::OnNMCustomdrawList1)
 END_MESSAGE_MAP()
 
 
@@ -235,7 +241,7 @@ HCURSOR CNetSnifferDlg::OnQueryDragIcon()
 }
 
 
-// Gui界面数据更新, 被snifferCore主动调用
+// Gui界面数据更新, 被snifferCore主动调用，每抓一个包调用一次
 void CNetSnifferDlg::UpdateGui(const pktCount* npkt, const datapkt* hdrspack)
 {
 	this->update_listCtrl(npkt, hdrspack);
@@ -257,7 +263,7 @@ void CNetSnifferDlg::OnCbnSelchangeCombo1()
 	m_snifferGrab.setChoosedIf(curDev);
 
 	if (m_snifferGrab.getChoosedIf()) {
-		//assert(std::string(m_snifferCore.getChoosedIf()->description) == CString2string(selText));
+		//assert(std::string(m_snifferGrab.getChoosedIf()->description) == CString2string(selText));
 		ASSERT(std::string(m_snifferGrab.getChoosedIf()->description) == CString2string(selText));
 	}
 }
@@ -279,15 +285,17 @@ void CNetSnifferDlg::OnBnClickedButton1()
 		printf("Error in snif_startCap\n");
 		return;
 	}
-
+	// 按钮状态
 	m_comboBox.EnableWindow(FALSE);
 	m_comboBoxRule.EnableWindow(FALSE);
 	m_buttonStart.EnableWindow(FALSE);
 	m_buttonStop.EnableWindow(TRUE);
 	m_buttonRead.EnableWindow(FALSE);
 	m_buttonSave.EnableWindow(FALSE);
+	m_buttonSift.EnableWindow(FALSE);
 }
 
+// 更新统计数据
 void CNetSnifferDlg::updateNPacket(const pktCount* npkt)
 {
 	CString buf;
@@ -336,14 +344,13 @@ void CNetSnifferDlg::update_listCtrl(const pktCount* npkt, const datapkt* hdrsPa
 	d_mac.Format(_T("%02x:%02x:%02x:%02x:%02x:%02x"), mac_arr[0], mac_arr[1], mac_arr[2], mac_arr[3], mac_arr[4], mac_arr[5]);
 	proto.Format(_T("%S"), hdrsPack->pktType);
 
-	// ts
-	/* convert the timestamp to readable format*/
+	// 将时间戳转换为可读格式
 	struct tm* ltime;
 	time_t t = hdrsPack->pcaph->ts.tv_sec;
 	ltime = localtime(&t);
 	strftime(strbuf, sizeof(strbuf), "%Y/%m/%d %H:%M:%S", ltime);
 	ts = CString(strbuf);
-	//// ip
+	// ip
 	auto code = ntohs(hdrsPack->ethh->proto);
 	if (code == ETH_PROTOCOL_ARP) {
 		s_ip.Format(_T("%d.%d.%d.%d"), hdrsPack->arph->saddr.byte1, hdrsPack->arph->saddr.byte2, hdrsPack->arph->saddr.byte3, hdrsPack->arph->saddr.byte4);
@@ -365,8 +372,8 @@ void CNetSnifferDlg::update_listCtrl(const pktCount* npkt, const datapkt* hdrsPa
 		d_ip.AppendFormat(_T("%02x", hdrsPack->iph6->daddr[7]));
 	}
 	// ListControl
-	int nitem = m_listCtrl.InsertItem(m_snifferGrab.getnpkt(), num);
-	m_listCtrl.SetItemText(nitem, 1, ts);
+	int nitem = m_listCtrl.InsertItem(m_snifferGrab.getnpkt(), num);// 插入nitem行，第一列为编号
+	m_listCtrl.SetItemText(nitem, 1, ts);// 时间戳
 	m_listCtrl.SetItemText(nitem, 2, len);
 	m_listCtrl.SetItemText(nitem, 3, s_mac);
 	m_listCtrl.SetItemText(nitem, 4, d_mac);
@@ -376,19 +383,337 @@ void CNetSnifferDlg::update_listCtrl(const pktCount* npkt, const datapkt* hdrsPa
 
 }
 
+void CNetSnifferDlg::updateTree(int index, const pktCount* npkt, const datapkt* hdrsPack)
+{
+	this->m_treeCtrl.DeleteAllItems();
+	// POSITION pos;
+	CString strbuf;
+	auto iph = hdrsPack->iph;
+	//printf("\n(in update Tree) Select: %d\n", index);
+	//printf("in func tree : %d.%d.%d.%d\n", iph->saddr.byte1, iph->saddr.byte2, iph->saddr.byte3, iph->saddr.byte4);
+	//printf("in func tree: %d.%d.%d.%d\n", iph->daddr.byte1, iph->daddr.byte2, iph->daddr.byte3, iph->daddr.byte4);
+
+	HTREEITEM root = this->m_treeCtrl.GetRootItem();
+	strbuf.Format(_T("接受到的第%d个数据包"), index + 1);
+
+	HTREEITEM head = this->m_treeCtrl.InsertItem(strbuf, root);
+
+	// 链路层 
+	HTREEITEM frame = this->m_treeCtrl.InsertItem(_T("链路层数据"), head);
+	// 源 mac 
+	strbuf.Format(_T("源MAC: "));
+	auto mac_arr = hdrsPack->ethh->s_mac;
+	strbuf.AppendFormat(_T("%02x:%02x:%02x:%02x:%02x:%02x"), mac_arr[0], mac_arr[1], mac_arr[2], mac_arr[3], mac_arr[4], mac_arr[5]);
+	this->m_treeCtrl.InsertItem(strbuf, frame);
+	// 目的 mac 
+	strbuf.Format(_T("目的MAC: "));
+	mac_arr = hdrsPack->ethh->d_mac;
+	strbuf.AppendFormat(_T("%02x:%02x:%02x:%02x:%02x:%02x"), mac_arr[0], mac_arr[1], mac_arr[2], mac_arr[3], mac_arr[4], mac_arr[5]);
+	this->m_treeCtrl.InsertItem(strbuf, frame);
+	// 类型
+	strbuf.Format(_T("类型码：0x%04x"), ntohs(hdrsPack->ethh->proto));
+	this->m_treeCtrl.InsertItem(strbuf, frame);
+
+
+	// 处理下一层协议数据 IP、ARP、IPv6...
+	auto proto = ntohs(hdrsPack->ethh->proto);
+	if (ETH_PROTOCOL_ARP == proto) {
+		cout << "Enter ETH_PROTOCOL_ARP" << endl;
+		auto arphdr = hdrsPack->arph;
+		HTREEITEM arp = this->m_treeCtrl.InsertItem(_T("ARP协议头"), head);
+		strbuf.Format(_T("硬件类型: %hu", ntohs(arphdr->hardware_type)));
+		this->m_treeCtrl.InsertItem(strbuf, arp);
+		strbuf.Format(_T("协议类型: 0x%hx", ntohs(arphdr->proto_type)));
+		this->m_treeCtrl.InsertItem(strbuf, arp);
+
+		strbuf.Format(_T("硬件地址长度: %u", (u_int)arphdr->hlen & 0xff));
+		cout << arphdr->hlen << " hardware len " << endl;
+		this->m_treeCtrl.InsertItem(strbuf, arp);
+		strbuf.Format(_T("协议地址长度: %u", (u_int)arphdr->plen & 0xff));
+		this->m_treeCtrl.InsertItem(strbuf, arp);
+		strbuf.Format(_T("操作码: 0x%hx", ntohs(arphdr->op_code)));
+		this->m_treeCtrl.InsertItem(strbuf, arp);
+		// 收发双方Mac、 Ip 
+		strbuf.Format(_T("发送方MAC: "));
+		mac_arr = hdrsPack->arph->src_mac;
+		strbuf.AppendFormat(_T("%02x:%02x:%02x:%02x:%02x:%02x"), mac_arr[0], mac_arr[1], mac_arr[2], mac_arr[3], mac_arr[4], mac_arr[5]);
+		this->m_treeCtrl.InsertItem(strbuf, arp);
+
+		strbuf.Format(_T("发送方ip: "));
+		auto iparr = hdrsPack->arph->saddr;
+		strbuf.AppendFormat(_T("%d.%d.%d.%d"), iparr.byte1, iparr.byte2, iparr.byte3, iparr.byte4);
+		this->m_treeCtrl.InsertItem(strbuf, arp);
+
+		strbuf.Format(_T("接受方MAC: "));
+		mac_arr = hdrsPack->arph->dest_mac;
+		strbuf.AppendFormat(_T("%02x:%02x:%02x:%02x:%02x:%02x"), mac_arr[0], mac_arr[1], mac_arr[2], mac_arr[3], mac_arr[4], mac_arr[5]);
+		this->m_treeCtrl.InsertItem(strbuf, arp);
+
+		strbuf.Format(_T("接收方ip: "));
+		iparr = hdrsPack->arph->daddr;
+		strbuf.AppendFormat(_T("%d.%d.%d.%d"), iparr.byte1, iparr.byte2, iparr.byte3, iparr.byte4);
+		this->m_treeCtrl.InsertItem(strbuf, arp);
+	}
+	else if (ETH_PROTOCOL_IP == proto) {
+		HTREEITEM ip = this->m_treeCtrl.InsertItem(_T("IP协议头"), head);
+		auto iphdr = hdrsPack->iph;
+		strbuf.Format(_T("版本: %d"), (iphdr->ver_ihl >> 4) & 0xf);
+		this->m_treeCtrl.InsertItem(strbuf, ip);
+		strbuf.Format(_T("IP头部长度: %d(bytes)"), (iphdr->ver_ihl & 0xf) * 4);
+		this->m_treeCtrl.InsertItem(strbuf, ip);
+		strbuf.Format(_T("服务类型: %d"), iphdr->tos);
+		this->m_treeCtrl.InsertItem(strbuf, ip);
+		strbuf.Format(_T("总长度: %d"), ntohs(iphdr->tlen));
+		this->m_treeCtrl.InsertItem(strbuf, ip);
+		strbuf.Format(_T("标识: %d"), ntohs(iphdr->identification));
+		this->m_treeCtrl.InsertItem(strbuf, ip);
+		strbuf.Format(_T("段偏移: %d"), ntohs(iphdr->flags_fo) & 0x1fff);
+		this->m_treeCtrl.InsertItem(strbuf, ip);
+		strbuf.Format(_T("生存期: %d"), iphdr->ttl);
+		this->m_treeCtrl.InsertItem(strbuf, ip);
+		strbuf.Format(_T("协议: %d"), iphdr->proto);
+		this->m_treeCtrl.InsertItem(strbuf, ip);
+		strbuf.Format(_T("头部校验和: %d"), ntohs(iphdr->crc));
+		this->m_treeCtrl.InsertItem(strbuf, ip);
+
+		strbuf.Format(_T("源IP: "));
+		struct in_addr in;
+		in.S_un.S_addr = *((u_long*)(void*)&iphdr->saddr);
+		strbuf.AppendFormat(CString(inet_ntoa(in)));
+		this->m_treeCtrl.InsertItem(strbuf, ip);
+
+		strbuf.Format(_T("目标IP: "));
+		in.S_un.S_addr = *((u_long*)(void*)&iphdr->daddr);
+		strbuf.AppendFormat(CString(inet_ntoa(in)));
+		this->m_treeCtrl.InsertItem(strbuf, ip);
+
+		/* Transport Layer: ICMP、 UDP 、 TCP */
+		if (IP_PROTOCOL_ICMP == hdrsPack->iph->proto) {
+			HTREEITEM icmp = this->m_treeCtrl.InsertItem(_T("ICMP协议头"), head);
+
+			strbuf.Format(_T("类型: %d"), hdrsPack->icmph->type);
+			this->m_treeCtrl.InsertItem(strbuf, icmp);
+			strbuf.Format(_T("代码: %d"), hdrsPack->icmph->code);
+			this->m_treeCtrl.InsertItem(strbuf, icmp);
+			strbuf.Format(_T("序号: %d"), hdrsPack->icmph->seq);
+			this->m_treeCtrl.InsertItem(strbuf, icmp);
+			strbuf.Format(_T("校验和: %d"), hdrsPack->icmph->chksum);
+			this->m_treeCtrl.InsertItem(strbuf, icmp);
+		}
+		else if (IP_PROTOCOL_TCP == hdrsPack->iph->proto) {
+			HTREEITEM tcp = this->m_treeCtrl.InsertItem(_T("TCP协议头"), head);
+			strbuf.Format(_T("源端口: %d"), ntohs(hdrsPack->tcph->sport));
+			this->m_treeCtrl.InsertItem(strbuf, tcp);
+			strbuf.Format(_T("目标端口: %d"), ntohs(hdrsPack->tcph->dport));
+			this->m_treeCtrl.InsertItem(strbuf, tcp);
+			strbuf.Format(_T("序号: %u"), hdrsPack->tcph->seq_num);
+			this->m_treeCtrl.InsertItem(strbuf, tcp);
+			strbuf.Format(_T("确认号: %u"), hdrsPack->tcph->ack_num);
+			this->m_treeCtrl.InsertItem(strbuf, tcp);
+			strbuf.Format(_T("头部长度: %d"), hdrsPack->tcph->thl);
+			this->m_treeCtrl.InsertItem(strbuf, tcp);
+
+			HTREEITEM flag = this->m_treeCtrl.InsertItem(_T("标志位"), tcp);
+			strbuf.Format(_T("cwr: %d"), hdrsPack->tcph->cwr);
+			this->m_treeCtrl.InsertItem(strbuf, flag);
+			strbuf.Format(_T("ece: %d"), hdrsPack->tcph->ece);
+			this->m_treeCtrl.InsertItem(strbuf, flag);
+
+			strbuf.Format(_T("urg: %d"), hdrsPack->tcph->urg);
+			this->m_treeCtrl.InsertItem(strbuf, flag);
+			strbuf.Format(_T("ack: %d"), hdrsPack->tcph->ack);
+			this->m_treeCtrl.InsertItem(strbuf, flag);
+			strbuf.Format(_T("psh: %d"), hdrsPack->tcph->psh);
+			this->m_treeCtrl.InsertItem(strbuf, flag);
+			strbuf.Format(_T("rst: %d"), hdrsPack->tcph->rst);
+			this->m_treeCtrl.InsertItem(strbuf, flag);
+			strbuf.Format(_T("syn: %d"), hdrsPack->tcph->syn);
+			this->m_treeCtrl.InsertItem(strbuf, flag);
+			strbuf.Format(_T("fin: %d"), hdrsPack->tcph->fin);
+			this->m_treeCtrl.InsertItem(strbuf, flag);
+
+			strbuf.Format(_T("	紧急指针: 0x%hx"), hdrsPack->tcph->urg_ptr);
+			this->m_treeCtrl.InsertItem(strbuf, tcp);
+			strbuf.Format(_T("	校验和: %hd"), hdrsPack->tcph->checksum);
+			this->m_treeCtrl.InsertItem(strbuf, tcp);
+		}
+		else if (IP_PROTOCOL_UDP == hdrsPack->iph->proto) {
+			HTREEITEM udp = this->m_treeCtrl.InsertItem(_T("UDP协议头"), head);
+			strbuf.Format(_T("源端口: %d"), hdrsPack->udph->sport);
+			this->m_treeCtrl.InsertItem(strbuf, udp);
+			strbuf.Format(_T("目标端口: %d"), hdrsPack->udph->dport);
+			this->m_treeCtrl.InsertItem(strbuf, udp);
+			strbuf.Format(_T("总长度: %d"), hdrsPack->udph->len);
+			this->m_treeCtrl.InsertItem(strbuf, udp);
+
+			strbuf.Format(_T("校验和: %d"), hdrsPack->udph->crc);
+			this->m_treeCtrl.InsertItem(strbuf, udp);
+		}
+	}
+	else if (ETH_PROTOCOL_IPV6 == proto) {
+		cout << "IPv6 head parse not supported" << endl;
+	}
+	else {
+		cout << "尚未实现的Ethernet Protocol类型 " << hdrsPack->ethh->proto << endl;
+	}
+
+}
+
+void CNetSnifferDlg::updateEdit(datapkt* hdrsPack)
+{
+	u_char* data = (u_char*)hdrsPack;
+	int len = hdrsPack->pcaph->len;
+
+	CString buf;
+	print_packet_hex(data, len, &buf);
+	this->m_edit.SetWindowText(buf);
+}
+
 // 过滤规则下拉框
 void CNetSnifferDlg::OnCbnSelchangeCombo2()
 {
 	// TODO: 在此添加控件通知处理程序代码
 	CString str_rule;
-	//m_comboBox.GetWindowText(selText);
 	m_comboBoxRule.GetWindowText(str_rule);
-	// 设置当前处理的dev
+	// 设置当前选择的过滤规则
+	// fddi(ether), tr, ip, ip6, arp, rarp, decnet, tcp and udp
 	auto rule = CString2string(str_rule);
-	//auto curDev = m_snifferGrab.adapterName2dev(CString2string(str_rule));
 	// 将选择结果传给后端
-	//m_snifferGrab.setChoosedIf(curDev);
 	m_snifferGrab.setChoosedRule(rule);
 	printf("CURRENT CHOOSED RULE: %s\n\n\n\n\n\n", rule.c_str());
-//
+
+	// 更新GUI
+	/*u_int n_udp = m_snifferGrab.data_parser.getStatistics().n_udp;
+	std::shared_ptr udph= m_snifferGrab.data_parser.getParsedHeaderPack().udph;
+	= m_snifferGrab.data_parser.getParsedHeaderPack().udph;*/
+	/*pktCount nPacket;
+	nPacket.n_udp= m_snifferGrab.data_parser.getStatistics().n_udp;
+	headerPack hdrPack; 
+	hdrPack.udph = m_snifferGrab.data_parser.getParsedHeaderPack().udph;
+	hdrPack.pcaph = m_snifferGrab.data_parser.getParsedHeaderPack().pcaph;
+	UpdateGui(&nPacket,&hdrPack);*/
+}
+
+
+// 结束抓包按钮
+void CNetSnifferDlg::OnBnClickedButton2()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	//关闭捕获线程和转储文件，并重置相关按钮的状态
+	pcap_dump_close(this->m_snifferGrab.getDumper());
+
+	HANDLE thread_handle = this->m_snifferGrab.getThreadHandle();//获取当前抓包线程
+	if (NULL == thread_handle) {
+		printf("NULL thread handle can not be terminated! \n");//当前无进行中的线程，不能终止空线程句柄！
+		return;
+	}
+	if (TerminateThread(thread_handle, -1) == 0) {
+		MessageBox(_T("线程正忙，无法停止，请稍后再试"), _T("错误"));
+		printf("ERROR: FAILED TO STOP THREAD\n");
+		return;
+	}
+
+	m_comboBox.EnableWindow(TRUE);
+	m_comboBoxRule.EnableWindow(TRUE);
+	this->m_snifferGrab.setThreadHandle(NULL);
+	this->m_buttonStart.EnableWindow(TRUE);
+	this->m_buttonStop.EnableWindow(FALSE);
+	this->m_buttonSave.EnableWindow(TRUE);
+	this->m_buttonRead.EnableWindow(TRUE);
+	this->m_buttonSift.EnableWindow(TRUE);
+}
+
+//结束抓包后，按规则过滤已抓包内容
+void CNetSnifferDlg::OnBnClickedButton5()
+{
+	//// 清空列表，获取目的协议包个数，然后遍历取出协议，然后update
+	//// TODO: 在此添加控件通知处理程序代码
+	//m_listCtrl.DeleteAllItems();
+	//// fddi(ether), tr, ip, ip6, arp, rarp, decnet, tcp and udp
+	//auto rule = m_snifferGrab.getChoosedRule();
+	//// 取出记录数据
+	//auto parseSet = this->m_snifferGrab.data_parser.getParesSet();
+	//if (rule == "arp") {
+
+	//}
+	//int nitem = this->m_snifferGrab.data_parser.getStatistics().
+	//// 根据规则遍历，取出符合规则的数据包
+	//for (auto pkt : parseSet) {
+	//	const char* pkttype = pkt.second.pktType;
+	//	if (rule == pkttype) {
+	//		update_listCtrl()
+	//	}
+	//}
+	//
+}
+
+// 无实际执行，添加事件响应消息错误，懒得删，要删3个地方
+void CNetSnifferDlg::OnTvnSelchangedTree1(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	LPNMTREEVIEW pNMTreeView = reinterpret_cast<LPNMTREEVIEW>(pNMHDR);
+	// TODO: 在此添加控件通知处理程序代码
+	*pResult = 0;
+}
+
+
+// 当列表内某一项改变-> 点击某一项时
+void CNetSnifferDlg::OnLvnItemchangedList1(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	LPNMLISTVIEW pNMLV = reinterpret_cast<LPNMLISTVIEW>(pNMHDR);
+	// TODO: 在此添加控件通知处理程序代码
+	int index;
+	index = this->m_listCtrl.GetHotItem();
+	// 获取点击的这一项对应的数据（pktCount, headerPack)
+	pair<pktCount, headerPack> data = m_snifferGrab.data_parser.getAt(index);
+	this->updateTree(index, &data.first, &data.second);
+
+	this->updateEdit(&data.second);
+
+	// TODO END
+	*pResult = 0;
+}
+
+
+// 将自定义绘图操作通知父级->给不同协议绘制颜色
+void CNetSnifferDlg::OnNMCustomdrawList1(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	// LPNMCUSTOMDRAW pNMCD = reinterpret_cast<LPNMCUSTOMDRAW>(pNMHDR);
+	LPNMLVCUSTOMDRAW pNMCD = (LPNMLVCUSTOMDRAW)pNMHDR;
+	// TODO: 在此添加控件通知处理程序代码
+	if (CDDS_PREPAINT == pNMCD->nmcd.dwDrawStage) {
+		*pResult = CDRF_NOTIFYITEMDRAW;
+	}
+	else if (CDDS_ITEMPREPAINT == pNMCD->nmcd.dwDrawStage) {
+		COLORREF crText = RGB(255, 0, 0);//未识别的协议头，默认为红色
+		string buf;
+		auto pos = pNMCD->nmcd.dwItemSpec;
+		// 取出该条记录中的协议头数据，
+		headerPack local_data = (this->m_snifferGrab.data_parser.getAt(pos).second);
+		// printf("Idx: %d, PackType: %s\n", pos, local_data.pktType);
+		const char* pkttype = local_data.pktType;
+		// 根据协议给颜色
+		if (strcmp(pkttype, PKTTYPE_IPv6) == 0) {
+			crText = RGB(110, 225, 252);
+		}
+		else if (strcmp(pkttype, PKTTYPE_UDP) == 0) {
+			crText = RGB(204, 153, 204);
+		}
+		else if (strcmp(pkttype, PKTTYPE_TCP) == 0) {
+			crText = RGB(164, 194, 224);
+		}
+		else if (strcmp(pkttype, PKTTYPE_ARP) == 0) {
+			crText = RGB(224, 236, 226);
+		}
+		else if (strcmp(pkttype, PKTTYPE_ICMP) == 0) {
+			crText = RGB(49, 166, 239);
+		}
+		else if (strcmp(pkttype, PKTTYPE_HTTP) == 0) {
+			crText = RGB(236, 231, 182);
+		}
+		else if (strcmp(pkttype, PKTTYPE_ICMPv6) == 0) {
+			crText = RGB(189, 254, 77);
+		}
+		pNMCD->clrTextBk = crText;
+		*pResult = CDRF_DODEFAULT;
+	}
 }

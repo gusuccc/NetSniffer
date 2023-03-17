@@ -42,14 +42,14 @@ public:
 	SnifferGrab m_snifferGrab;
 	void UpdateGui(const pktCount* npkt, const datapkt* hdrspack);
 	afx_msg void OnCbnSelchangeCombo1();// 网卡下拉框
-	afx_msg void OnBnClickedButton1();
+	afx_msg void OnBnClickedButton1(); // 开始抓包
 
 // 界面数据更新相关
 private:
-	void updateNPacket(const pktCount* npkt);
-	void update_listCtrl(const pktCount* npkt, const datapkt* hdrsPack);
-	void updateTree(int index, const pktCount* npkt, const datapkt* hdrsPack);
-	void updateEdit(datapkt* hdrsPack);
+	void updateNPacket(const pktCount* npkt);// 更新统计数据
+	void update_listCtrl(const pktCount* npkt, const datapkt* hdrsPack);// 更新数据帧列表
+	void updateTree(int index, const pktCount* npkt, const datapkt* hdrsPack);// 更新树状分析表
+	void updateEdit(datapkt* hdrsPack);// 更新帧内内容列表
 public:
 // 网卡下拉列表
 	CComboBox m_comboBox;
@@ -70,12 +70,19 @@ public:
 	CTreeCtrl m_treeCtrl;
 // 数据包详情
 	CEdit m_edit;
-// 开始，结束，保存，读取
+// 开始，结束，保存，读取，筛选
 	CButton m_buttonStart;
 	CButton m_buttonStop;
 	CButton m_buttonSave;
 	CButton m_buttonRead;
+	CButton m_buttonSift;
 //规则过滤列表
 	CComboBox m_comboBoxRule;
+// 消息响应函数
 	afx_msg void OnCbnSelchangeCombo2();
+	afx_msg void OnBnClickedButton2();
+	afx_msg void OnBnClickedButton5();
+	afx_msg void OnTvnSelchangedTree1(NMHDR* pNMHDR, LRESULT* pResult);//多余添加，无实际执行
+	afx_msg void OnLvnItemchangedList1(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnNMCustomdrawList1(NMHDR* pNMHDR, LRESULT* pResult);
 };

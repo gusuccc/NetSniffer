@@ -226,12 +226,22 @@ int SnifferGrab::m_snif_CreateCapThread()
 	return 0;
 }
 
+pcap_dumper_t* SnifferGrab::getDumper() const
+{
+	return this->dumpfile;
+}
+
+const char* SnifferGrab::getDefaltDumpFilePath() const
+{
+	return this->default_dump_file;
+}
+
 //线程创建函数
 DWORD __stdcall SnifferGrab::m_snif_CapThreadFun(LPVOID lpParameter)
 {
 	// printf("Thread Function Called\n");
 	SnifferGrab* _this = (SnifferGrab*)lpParameter;
-	struct pcap_pkthdr* pkt_header;   // 由pcap添加的通用标题
+	struct pcap_pkthdr* pkt_header;   // 由pcap添加的通用标题，包含长度时间戳
 	const u_char* pkt_data;
 
 	int code = 0;
@@ -249,11 +259,11 @@ DWORD __stdcall SnifferGrab::m_snif_CapThreadFun(LPVOID lpParameter)
 			continue;
 		}
 
-		// 数据解析
+		// 数据解析，并set保存
 		_this->data_parser.set(pkt_header, pkt_data);
 		_this->data_parser.parse();
 
-		// 解析结果
+		// 获取解析结果
 		pktCount nPacket = _this->data_parser.getStatistics();
 		headerPack hdrPack = _this->data_parser.getParsedHeaderPack();
 		// 打印

@@ -206,6 +206,11 @@ that is explicitly declared const and not explicitly declared extern has interna
 linkage, so these variables would not cause duplicate symbols when you link together
 translation units. Alternatively you could explicitly declare the constants as static.
 */
+
+/*
+* 下面变量对应内容，pktType存放：ARP、UDP、TCP、HTTP、ICMP、ICMPv6、IPv6
+* 也就是最终协议类型
+*/
 const char* const PKTTYPE_ARP = "ARP";
 const char* const PKTTYPE_UDP = "UDP";
 const char* const PKTTYPE_TCP = "TCP";
@@ -214,15 +219,18 @@ const char* const PKTTYPE_ICMP = "ICMP";
 const char* const PKTTYPE_ICMPv6 = "ICMPv6";
 const char* const PKTTYPE_IPv6 = "IPv6";
 
+
 // 保存解析得到的heads pointers
 // 使用shared_ptr 进行自动内存管理
 typedef struct datapkt
 {
 	char  pktType[8];			     // 帧的最终类型（五层模型中，保存的是本程序能解析到的最上层的协议名称）
-									 //int time[6];					 //时间 ? 
-									 //int len;		
-									 //长度 ?
-	shared_ptr<pktHeader> pcaph;          // winPcap给的头
+									 /*
+									 *int time[6];
+									 *int len;		
+									 *时间戳，长度等放在pcaph里面
+									 */
+	shared_ptr<pktHeader> pcaph;			 // winPcap给的头
 	shared_ptr<eth_header> ethh;			 //链路层包头
 	shared_ptr<arp_header> arph;			 //ARP包头
 	shared_ptr<ip_header> iph;				 //IP包头
