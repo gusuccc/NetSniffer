@@ -71,14 +71,16 @@ public:
 	CTreeCtrl m_treeCtrl;
 // 数据包详情
 	CEdit m_edit;
-// 开始，结束，保存，读取，筛选
+// 开始，结束，保存，读取，筛选，暂停/继续
 	CButton m_buttonStart;
 	CButton m_buttonStop;
 	CButton m_buttonSave;
 	CButton m_buttonRead;
 	CButton m_buttonSift;
+	CButton m_ButtonPause;
 //规则过滤列表
 	CComboBox m_comboBoxRule;
+	CEdit m_EditRule;
 // 消息响应函数
 	afx_msg void OnCbnSelchangeCombo2();
 	afx_msg void OnBnClickedButton2();
@@ -89,4 +91,7 @@ public:
 	afx_msg void OnBnClickedButton3();
 	afx_msg void OnBnClickedButton4();
 	afx_msg void OnBnClickedButton6();
+	afx_msg void OnEnChangeEdit12();
+
+	afx_msg void OnBnClickedButton7();
 };

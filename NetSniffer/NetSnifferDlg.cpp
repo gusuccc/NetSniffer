@@ -90,6 +90,8 @@ void CNetSnifferDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_BUTTON4, m_buttonRead);
 	DDX_Control(pDX, IDC_COMBO2, m_comboBoxRule);
 	DDX_Control(pDX, IDC_BUTTON5, m_buttonSift);
+	DDX_Control(pDX, IDC_EDIT12, m_EditRule);
+	DDX_Control(pDX, IDC_BUTTON7, m_ButtonPause);
 }
 
 BEGIN_MESSAGE_MAP(CNetSnifferDlg, CDialogEx)
@@ -107,6 +109,8 @@ BEGIN_MESSAGE_MAP(CNetSnifferDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON3, &CNetSnifferDlg::OnBnClickedButton3)
 	ON_BN_CLICKED(IDC_BUTTON4, &CNetSnifferDlg::OnBnClickedButton4)
 	ON_BN_CLICKED(IDC_BUTTON6, &CNetSnifferDlg::OnBnClickedButton6)
+	ON_EN_CHANGE(IDC_EDIT12, &CNetSnifferDlg::OnEnChangeEdit12)
+	ON_BN_CLICKED(IDC_BUTTON7, &CNetSnifferDlg::OnBnClickedButton7)
 END_MESSAGE_MAP()
 
 
@@ -160,13 +164,13 @@ BOOL CNetSnifferDlg::OnInitDialog()
 	m_comboBox.SetCurSel(0);
 	// 过滤规则列表初始化
 	m_comboBoxRule.AddString(_T("请选择过滤规则（可选）"));
-	m_comboBoxRule.SetCurSel(0);
-	m_comboBoxRule.AddString(_T("ip"));
-	m_comboBoxRule.AddString(_T("ip6"));
 	m_comboBoxRule.AddString(_T("arp"));
 	m_comboBoxRule.AddString(_T("tcp"));
 	m_comboBoxRule.AddString(_T("udp"));
+	m_comboBoxRule.AddString(_T("icmp"));
 	m_comboBoxRule.AddString(_T("xxx"));
+	m_comboBoxRule.SetCurSel(5);
+
 
 	//m_CMyEdit.setPrompt();
 
@@ -629,7 +633,11 @@ void CNetSnifferDlg::OnBnClickedButton5()
 	// 清空列表，获取目的协议包个数，然后遍历取出协议，然后update
 	// TODO: 在此添加控件通知处理程序代码
 	m_listCtrl.DeleteAllItems();
-	//ip, ip6, arp, tcp，udp，""
+	/*const char* const PKTTYPE_ARP = "ARP";arp
+	const char* const PKTTYPE_UDP = "UDP";udp
+	const char* const PKTTYPE_TCP = "TCP";tcp
+	const char* const PKTTYPE_ICMP = "ICMP";icmp
+	*/
 	auto rule = m_snifferGrab.getChoosedRule();
 	// 取出记录数据
 	auto parseSet = this->m_snifferGrab.data_parser.getParesSet();
@@ -899,6 +907,57 @@ void CNetSnifferDlg::OnBnClickedButton4()
 void CNetSnifferDlg::OnBnClickedButton6()
 {
 	// TODO: 在此添加控件通知处理程序代码
-	CString mhtPath = _T("WinPcap Filter Syntax.html");		//这里添加需要查看的文件路径或者网址（http://**）或者exe文件。若写成test.exe，则默认当前目录下
+	CString mhtPath = _T("https://www.winpcap.org/docs/docs_412/html/group__language.html");		//这里添加需要查看的文件路径或者网址（http://**）或者exe文件。若写成test.exe，则默认当前目录下
 	ShellExecute(NULL, _T("open"), mhtPath, NULL, NULL, SW_SHOWNORMAL);	//第4个参数可传入命令行参数，第5个参数可指定文件目录，第6个参数可为SW_HIDE不显示或者SW_SHOW显示
+}
+
+
+void CNetSnifferDlg::OnEnChangeEdit12()
+{
+	// TODO:  如果该控件是 RICHEDIT 控件，它将不
+	// 发送此通知，除非重写 CDialogEx::OnInitDialog()
+	// 函数并调用 CRichEditCtrl().SetEventMask()，
+	// 同时将 ENM_CHANGE 标志“或”运算到掩码中。
+
+	// TODO:  在此添加控件通知处理程序代码
+	m_comboBoxRule.SetCurSel(5);
+	CString str_rule;
+	m_EditRule.GetWindowText(str_rule);
+	// 设置当前输入的过滤规则
+	auto rule = CString2string(str_rule); // CString转string
+	// 将选择结果传给后端
+	m_snifferGrab.setChoosedRule(rule);
+}
+
+
+// 暂停/继续
+void CNetSnifferDlg::OnBnClickedButton7()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	CString buf;
+	m_ButtonPause.GetWindowText(buf);
+	auto state = CString2string(buf);
+	if (state !="继续") {
+		OnBnClickedButton2();
+		m_ButtonPause.SetWindowTextW(_T("继续"));
+	}
+	else {
+		
+		int status = m_snifferGrab.snif_startCap();
+		if (status == -1) {
+			printf("Error in snif_startCap\n");
+			return;
+		}
+		// 按钮状态
+		m_comboBox.EnableWindow(FALSE);
+		m_comboBoxRule.EnableWindow(FALSE);
+		m_buttonStart.EnableWindow(FALSE);
+		m_buttonStop.EnableWindow(TRUE);
+		m_buttonRead.EnableWindow(FALSE);
+		m_buttonSave.EnableWindow(FALSE);
+		m_buttonSift.EnableWindow(FALSE);
+		m_ButtonPause.SetWindowTextW(_T("暂停"));
+	}
+
+	
 }
