@@ -15,7 +15,7 @@
 #include "iostream"
 #include "utils.h"
 #include "FrameDef.h"
-//#include "frame_parser.h"// 以太网数据解析器支持
+#include "FrameParser.h"// 以太网数据解析器支持,可以不include
 
 
 #include "NetSnifferDlg.h" 
@@ -73,27 +73,37 @@ int SnifferGrab::snif_setupFilter()
 	struct bpf_program fcode;
 	auto curIf = this->getChoosedIf();
 	int netmask;
+	// 官方文档https://www.winpcap.org/docs/docs_412/html/group__wpcap__tut5.html
+
 	if (curIf->addresses != NULL)
-		// 检索接口第一个地址的掩码
+		/* Retrieve the mask of the first address of the interface 检索接口第一个地址的掩码*/
 		netmask = ((struct sockaddr_in*)(curIf->addresses->netmask))->sin_addr.S_un.S_addr;
 	else
-		// 如果接口没有地址，就假设它位于C类网络
+		/* If the interface is without an address we suppose to be in a C class network 如果接口没有地址，就假设它位于C类网络*/
 		netmask = 0xffffff;
 	// 获取规则
 	auto tmp = this->getChoosedRule();
-	
+	// 编译过滤器
+	//  if (pcap_compile(adhandle, &fcode, "ip and tcp", 1, netmask) < 0) 应用ip and tcp规则
 	if (pcap_compile(this->getOpenedIfHandle(), &fcode, const_cast<char*>(this->getChoosedRule().c_str()), 1, netmask) < 0)
 	{
 		MessageBox(GetForegroundWindow(), _T("无法编译过滤规则.请检查过滤规则语法"), _T("错误"), 1);
 		//	printf("\nUnable to compile the packet filter. Check the syntax.\n");
+		/* Free the device list */
+		pcap_freealldevs(m_alldevs);
 		return -1;
 	}
 
-	// 报错提示
+	/*
+	设置过滤器 一旦调用pcap_setfilter()，
+	关联的过滤器将应用于来自网络的所有数据包，
+	所有符合要求的数据包（即，布尔表达式计算结果为真的数据包）
+	将实际复制到应用程序。
+	*/ 
 	if (pcap_setfilter(this->getOpenedIfHandle(), &fcode) < 0)
 	{
 		MessageBox(GetForegroundWindow(), _T("设置过滤规则时出现错误"), _T("提示"), 1);
-		fprintf(stderr, "\nError setting the filter.\n");
+		//fprintf(stderr, "\nError setting the filter.\n");
 		return -1;
 	}
 	return 0;
@@ -248,7 +258,7 @@ DWORD __stdcall SnifferGrab::m_snif_CapThreadFun(LPVOID lpParameter)
 	DataParser _parser;
 	_this->data_parser = _parser;
 	_this->setnpkt(0);
-	// 检索数据包
+	// 检索数据包,pcap_next_ex代替pcao_loop遍历
 	while ((code = pcap_next_ex(_this->getOpenedIfHandle(), &pkt_header, &pkt_data)) >= 0) {
 		// 将数据包保存在转储文件中
 		if ((u_char*)_this->dumpfile != NULL)

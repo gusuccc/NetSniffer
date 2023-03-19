@@ -9,6 +9,7 @@
 #include "windows.h"
 #include "string"
 #include "Winuser.h" // MESSAGE
+#include "algorithm"
 // winCap Suport
 #include "pcap.h"
 
@@ -103,6 +104,9 @@ BEGIN_MESSAGE_MAP(CNetSnifferDlg, CDialogEx)
 	ON_NOTIFY(TVN_SELCHANGED, IDC_TREE1, &CNetSnifferDlg::OnTvnSelchangedTree1)
 	ON_NOTIFY(LVN_ITEMCHANGED, IDC_LIST1, &CNetSnifferDlg::OnLvnItemchangedList1)
 	ON_NOTIFY(NM_CUSTOMDRAW, IDC_LIST1, &CNetSnifferDlg::OnNMCustomdrawList1)
+	ON_BN_CLICKED(IDC_BUTTON3, &CNetSnifferDlg::OnBnClickedButton3)
+	ON_BN_CLICKED(IDC_BUTTON4, &CNetSnifferDlg::OnBnClickedButton4)
+	ON_BN_CLICKED(IDC_BUTTON6, &CNetSnifferDlg::OnBnClickedButton6)
 END_MESSAGE_MAP()
 
 
@@ -157,13 +161,9 @@ BOOL CNetSnifferDlg::OnInitDialog()
 	// 过滤规则列表初始化
 	m_comboBoxRule.AddString(_T("请选择过滤规则（可选）"));
 	m_comboBoxRule.SetCurSel(0);
-	m_comboBoxRule.AddString(_T("ether"));
-	m_comboBoxRule.AddString(_T("tr"));
 	m_comboBoxRule.AddString(_T("ip"));
 	m_comboBoxRule.AddString(_T("ip6"));
 	m_comboBoxRule.AddString(_T("arp"));
-	m_comboBoxRule.AddString(_T("rarp"));
-	m_comboBoxRule.AddString(_T("decnet"));
 	m_comboBoxRule.AddString(_T("tcp"));
 	m_comboBoxRule.AddString(_T("udp"));
 	m_comboBoxRule.AddString(_T("xxx"));
@@ -172,9 +172,9 @@ BOOL CNetSnifferDlg::OnInitDialog()
 
 	////  fddi(ether), tr, ip, ip6, arp, rarp, decnet, tcp and udp
 
-	//// 初始化设置“结束”和“保存”按钮不可用
-	//m_buttonStop.EnableWindow(FALSE);
-	//m_buttonSave.EnableWindow(FALSE);
+	// 初始化设置“结束”和“保存”按钮不可用
+	m_buttonStop.EnableWindow(FALSE);
+	m_buttonSave.EnableWindow(FALSE);
 
 
 	// 初始化网络适配器列表
@@ -336,7 +336,7 @@ void CNetSnifferDlg::update_listCtrl(const pktCount* npkt, const datapkt* hdrsPa
 	char strbuf[32];
 	CString num, ts, len, s_mac, d_mac, proto, s_ip, d_ip;
 	u_char* mac_arr;
-	num.Format(_T("%d"), m_snifferGrab.getnpkt());
+	num.Format(_T("%d"), m_snifferGrab.getnpkt());//
 	len.Format(_T("%d"), hdrsPack->pcaph->len);
 	mac_arr = hdrsPack->ethh->s_mac;
 	s_mac.Format(_T("%02x:%02x:%02x:%02x:%02x:%02x"), mac_arr[0], mac_arr[1], mac_arr[2], mac_arr[3], mac_arr[4], mac_arr[5]);
@@ -576,7 +576,7 @@ void CNetSnifferDlg::OnCbnSelchangeCombo2()
 	CString str_rule;
 	m_comboBoxRule.GetWindowText(str_rule);
 	// 设置当前选择的过滤规则
-	// fddi(ether), tr, ip, ip6, arp, rarp, decnet, tcp and udp
+	// ip, ip6, arp, rarp, decnet, tcp and udp
 	auto rule = CString2string(str_rule);
 	// 将选择结果传给后端
 	m_snifferGrab.setChoosedRule(rule);
@@ -626,25 +626,87 @@ void CNetSnifferDlg::OnBnClickedButton2()
 //结束抓包后，按规则过滤已抓包内容
 void CNetSnifferDlg::OnBnClickedButton5()
 {
-	//// 清空列表，获取目的协议包个数，然后遍历取出协议，然后update
-	//// TODO: 在此添加控件通知处理程序代码
-	//m_listCtrl.DeleteAllItems();
-	//// fddi(ether), tr, ip, ip6, arp, rarp, decnet, tcp and udp
-	//auto rule = m_snifferGrab.getChoosedRule();
-	//// 取出记录数据
-	//auto parseSet = this->m_snifferGrab.data_parser.getParesSet();
-	//if (rule == "arp") {
+	// 清空列表，获取目的协议包个数，然后遍历取出协议，然后update
+	// TODO: 在此添加控件通知处理程序代码
+	m_listCtrl.DeleteAllItems();
+	//ip, ip6, arp, tcp，udp，""
+	auto rule = m_snifferGrab.getChoosedRule();
+	// 取出记录数据
+	auto parseSet = this->m_snifferGrab.data_parser.getParesSet();
+	if (rule != "") 
+	{
+		transform(rule.begin(), rule.end(), rule.begin(), ::toupper); //转大写
+		// 根据规则遍历，取出符合规则的数据包
+		int i = 1;
+		for (auto pkt : parseSet) {
+			const char* pkttype = pkt.second.pktType;
+			if (rule == pkttype) {
+				update_listCtrl_change(i, &pkt.second);
+			}
+			i++;
+		}
+	}
+	else 
+	{
+		int i = 1;
+		for (auto pkt : parseSet) 
+		{
+			update_listCtrl_change(i, &pkt.second);
+			i++;
+		}
+	}
+}
+	
+void CNetSnifferDlg::update_listCtrl_change(int npkt, const datapkt* hdrsPack)
+{
+	char strbuf[32];
+	CString num, ts, len, s_mac, d_mac, proto, s_ip, d_ip;
+	u_char* mac_arr;
+	num.Format(_T("%d"),npkt);//
+	len.Format(_T("%d"), hdrsPack->pcaph->len);
+	mac_arr = hdrsPack->ethh->s_mac;
+	s_mac.Format(_T("%02x:%02x:%02x:%02x:%02x:%02x"), mac_arr[0], mac_arr[1], mac_arr[2], mac_arr[3], mac_arr[4], mac_arr[5]);
+	mac_arr = hdrsPack->ethh->d_mac;
+	d_mac.Format(_T("%02x:%02x:%02x:%02x:%02x:%02x"), mac_arr[0], mac_arr[1], mac_arr[2], mac_arr[3], mac_arr[4], mac_arr[5]);
+	proto.Format(_T("%S"), hdrsPack->pktType);
 
-	//}
-	//int nitem = this->m_snifferGrab.data_parser.getStatistics().
-	//// 根据规则遍历，取出符合规则的数据包
-	//for (auto pkt : parseSet) {
-	//	const char* pkttype = pkt.second.pktType;
-	//	if (rule == pkttype) {
-	//		update_listCtrl()
-	//	}
-	//}
-	//
+	// 将时间戳转换为可读格式
+	struct tm* ltime;
+	time_t t = hdrsPack->pcaph->ts.tv_sec;
+	ltime = localtime(&t);
+	strftime(strbuf, sizeof(strbuf), "%Y/%m/%d %H:%M:%S", ltime);
+	ts = CString(strbuf);
+	// ip
+	auto code = ntohs(hdrsPack->ethh->proto);
+	if (code == ETH_PROTOCOL_ARP) {
+		s_ip.Format(_T("%d.%d.%d.%d"), hdrsPack->arph->saddr.byte1, hdrsPack->arph->saddr.byte2, hdrsPack->arph->saddr.byte3, hdrsPack->arph->saddr.byte4);
+		d_ip.Format(_T("%d.%d.%d.%d"), hdrsPack->arph->daddr.byte1, hdrsPack->arph->daddr.byte2, hdrsPack->arph->daddr.byte3, hdrsPack->arph->daddr.byte4);
+	}
+	else if (code == ETH_PROTOCOL_IP) {
+		struct in_addr ip;
+		ip.S_un.S_addr = *((u_long*)(void*)(&hdrsPack->iph->saddr));
+		s_ip = CString(inet_ntoa(ip));
+		ip.S_un.S_addr = *((u_long*)(void*)(&hdrsPack->iph->daddr));
+		d_ip = CString(inet_ntoa(ip));
+	}
+	else if (code == ETH_PROTOCOL_IPV6) {
+		for (int i = 0; i < 7; i++) {
+			s_ip.AppendFormat(_T("%02x:", hdrsPack->iph6->saddr[i]));
+			d_ip.AppendFormat(_T("%02x:", hdrsPack->iph6->daddr[i]));
+		}
+		s_ip.AppendFormat(_T("%02x", hdrsPack->iph6->saddr[7]));
+		d_ip.AppendFormat(_T("%02x", hdrsPack->iph6->daddr[7]));
+	}
+	// ListControl
+	int nitem = m_listCtrl.InsertItem(npkt, num);//  nItem控件中行的索引lpszItem: 控件头的名字
+	m_listCtrl.SetItemText(nitem, 1, ts);// 时间戳
+	m_listCtrl.SetItemText(nitem, 2, len);
+	m_listCtrl.SetItemText(nitem, 3, s_mac);
+	m_listCtrl.SetItemText(nitem, 4, d_mac);
+	m_listCtrl.SetItemText(nitem, 5, proto);
+	m_listCtrl.SetItemText(nitem, 6, s_ip);
+	m_listCtrl.SetItemText(nitem, 7, d_ip);
+
 }
 
 // 无实际执行，添加事件响应消息错误，懒得删，要删3个地方
@@ -661,8 +723,12 @@ void CNetSnifferDlg::OnLvnItemchangedList1(NMHDR* pNMHDR, LRESULT* pResult)
 {
 	LPNMLISTVIEW pNMLV = reinterpret_cast<LPNMLISTVIEW>(pNMHDR);
 	// TODO: 在此添加控件通知处理程序代码
-	int index;
-	index = this->m_listCtrl.GetHotItem();
+	//int index = this->m_listCtrl.GetHotItem()
+	int row;
+	row = this->m_listCtrl.GetHotItem();
+	CString str = m_listCtrl.GetItemText(row, 0);
+	// 获取的是行号，改为获取num
+	int index= _ttoi(str)-1;
 	// 获取点击的这一项对应的数据（pktCount, headerPack)
 	pair<pktCount, headerPack> data = m_snifferGrab.data_parser.getAt(index);
 	this->updateTree(index, &data.first, &data.second);
@@ -688,7 +754,12 @@ void CNetSnifferDlg::OnNMCustomdrawList1(NMHDR* pNMHDR, LRESULT* pResult)
 		string buf;
 		auto pos = pNMCD->nmcd.dwItemSpec;
 		// 取出该条记录中的协议头数据，
-		headerPack local_data = (this->m_snifferGrab.data_parser.getAt(pos).second);
+		//int row;
+		//row = this->m_listCtrl.GetHotItem();
+		// 获取的是行号，改为获取num
+		int index = _ttoi(m_listCtrl.GetItemText(pos, 0)) - 1;
+
+		headerPack local_data = (this->m_snifferGrab.data_parser.getAt(index).second);
 		// printf("Idx: %d, PackType: %s\n", pos, local_data.pktType);
 		const char* pkttype = local_data.pktType;
 		// 根据协议给颜色
@@ -716,4 +787,118 @@ void CNetSnifferDlg::OnNMCustomdrawList1(NMHDR* pNMHDR, LRESULT* pResult)
 		pNMCD->clrTextBk = crText;
 		*pResult = CDRF_DODEFAULT;
 	}
+}
+
+// 保存文件
+void CNetSnifferDlg::OnBnClickedButton3()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	CFileDialog fdlg(FALSE, NULL, NULL, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, L"All files(*.dmp)");
+	fdlg.m_ofn.lpstrTitle = L"Save File";// 窗口名
+	fdlg.m_ofn.lpstrInitialDir = L"D:\\";// 保存默认路径
+	if (fdlg.DoModal() == IDOK)
+	{
+		CString des_path = fdlg.GetPathName() + ".dmp";
+		CString src_path = CString(this->m_snifferGrab.getDefaltDumpFilePath());
+		// 将转储文件复制到用户指定的路径
+		if (CopyFile(src_path, des_path, FALSE)) {
+			MessageBox(_T("保存成功"), _T("提示"));
+		}
+		else {
+			MessageBox(_T("保存失败，请重试"), _T("提示"));
+		};
+	}
+}
+
+
+// 读取文件
+void CNetSnifferDlg::OnBnClickedButton4()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	// 打开文件对话框
+	BOOL isOpen = TRUE;		//是否打开(否则为保存)
+	CString defaultDir = L"D:\\";	//默认打开的文件路径
+	CString fileName = L"";			//默认打开的文件名
+	CString filter = L"文件 (*.dmp)||";	//文件过滤的类型
+	CFileDialog openFileDlg(isOpen, defaultDir, fileName, OFN_HIDEREADONLY | OFN_READONLY, filter, NULL);
+	openFileDlg.GetOFN().lpstrInitialDir = L"D:\\";
+	INT_PTR result = openFileDlg.DoModal();
+	CString filePath;
+	if (result == IDOK) {
+		filePath = openFileDlg.GetPathName();
+	}
+	else {
+		return;
+	}
+
+	//根据WinPcap语法创建源字符串
+	CFileDialog fdlg(FALSE, NULL, NULL, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, L"All files(*.dmp)");
+	fdlg.m_ofn.lpstrTitle = L"Open File";// 打开的窗口名
+	fdlg.m_ofn.lpstrInitialDir = L"D:\\";// 默认初始打开路径
+
+	char source[PCAP_BUF_SIZE];// char source[1024]
+	char errbuf[PCAP_ERRBUF_SIZE];// char errbuf[256]
+	/*
+	pcap_createsrcsrc()。此函数需要创建一个源字符串，
+	该字符串以一个标记开始，该标记用于告诉WinPcap源的类型，
+	例如，如果我们要打开一个适配器，则为“rpcap://”,
+	如果我们要打开一个文件，则为“file://”。
+	*/
+	if (pcap_createsrcstr(source,         // 将保留源字符串的变量
+		PCAP_SRC_FILE,  // 要打开一个文件
+		NULL,           // 远程主机
+		NULL,           // 远程主机上的端口
+		CT2A(filePath),        // 打开的文件的名称
+		errbuf          // 误差缓冲器
+	) != 0)
+	{
+		fprintf(stderr, "\n创建源字符串时出错\n");
+		MessageBox(_T("创建源字符串时出错"), _T("错误"));
+		return;
+	}
+
+	pcap_t* fp;
+	// 打开捕获文件 
+	if ((fp = pcap_open(source,         // 设备的名称
+		65536,          // 要捕获的数据包部分
+						// 65536保证整个数据包将在所有链路层被捕获
+		PCAP_OPENFLAG_PROMISCUOUS,     // promiscuous mode 混杂模式
+		1000,              // 读取超时设置
+		NULL,              // 远程机器上的身份验证
+		errbuf         // 误差缓冲器
+	)) == NULL)
+	{
+		//fprintf(stderr, "\n无法打开文件 %s.\n", source);
+		MessageBox(_T("无法打开文件"), _T("错误"));
+		return;
+	}
+
+
+	// 重置GUI状态
+	m_treeCtrl.DeleteAllItems();
+	m_listCtrl.DeleteAllItems();
+	m_edit.SetWindowText(_T(""));
+	// 计数统计重置
+	pktCount pktcnt;
+	CNetSnifferDlg::updateNPacket(&pktcnt);
+
+	// 启动抓包线程
+	m_snifferGrab.m_snif_CreateCapThread();
+
+	// 设置打开的接口句柄(在这种情况下，该句柄是从文件创建的)
+	m_snifferGrab.setOpenIfHandle(fp);
+	m_buttonRead.EnableWindow(FALSE);
+	m_buttonSave.EnableWindow(FALSE);
+	m_buttonStart.EnableWindow(FALSE);
+	//WaitForSingleObject(this->m_snifferCore.getOpenedIfHandle(), INFINITE);	//一直等待，直到子线程返回
+	//CloseHandle(this->m_snifferCore.getOpenedIfHandle());
+}
+
+
+// 规则规则帮助文件
+void CNetSnifferDlg::OnBnClickedButton6()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	CString mhtPath = _T("WinPcap Filter Syntax.html");		//这里添加需要查看的文件路径或者网址（http://**）或者exe文件。若写成test.exe，则默认当前目录下
+	ShellExecute(NULL, _T("open"), mhtPath, NULL, NULL, SW_SHOWNORMAL);	//第4个参数可传入命令行参数，第5个参数可指定文件目录，第6个参数可为SW_HIDE不显示或者SW_SHOW显示
 }

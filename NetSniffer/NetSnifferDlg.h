@@ -50,6 +50,7 @@ private:
 	void update_listCtrl(const pktCount* npkt, const datapkt* hdrsPack);// 更新数据帧列表
 	void updateTree(int index, const pktCount* npkt, const datapkt* hdrsPack);// 更新树状分析表
 	void updateEdit(datapkt* hdrsPack);// 更新帧内内容列表
+	void update_listCtrl_change(int npkt, const datapkt* hdrsPack);// 按规则筛选
 public:
 // 网卡下拉列表
 	CComboBox m_comboBox;
@@ -85,4 +86,7 @@ public:
 	afx_msg void OnTvnSelchangedTree1(NMHDR* pNMHDR, LRESULT* pResult);//多余添加，无实际执行
 	afx_msg void OnLvnItemchangedList1(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnNMCustomdrawList1(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnBnClickedButton3();
+	afx_msg void OnBnClickedButton4();
+	afx_msg void OnBnClickedButton6();
 };
