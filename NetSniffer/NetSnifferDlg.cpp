@@ -91,7 +91,7 @@ void CNetSnifferDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_COMBO2, m_comboBoxRule);
 	DDX_Control(pDX, IDC_BUTTON5, m_buttonSift);
 	DDX_Control(pDX, IDC_EDIT12, m_EditRule);
-	DDX_Control(pDX, IDC_BUTTON7, m_ButtonPause);
+	//DDX_Control(pDX, IDC_BUTTON7, m_ButtonPause);
 }
 
 BEGIN_MESSAGE_MAP(CNetSnifferDlg, CDialogEx)
@@ -110,7 +110,7 @@ BEGIN_MESSAGE_MAP(CNetSnifferDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON4, &CNetSnifferDlg::OnBnClickedButton4)
 	ON_BN_CLICKED(IDC_BUTTON6, &CNetSnifferDlg::OnBnClickedButton6)
 	ON_EN_CHANGE(IDC_EDIT12, &CNetSnifferDlg::OnEnChangeEdit12)
-	ON_BN_CLICKED(IDC_BUTTON7, &CNetSnifferDlg::OnBnClickedButton7)
+	//ON_BN_CLICKED(IDC_BUTTON7, &CNetSnifferDlg::OnBnClickedButton7)
 END_MESSAGE_MAP()
 
 
@@ -179,6 +179,7 @@ BOOL CNetSnifferDlg::OnInitDialog()
 	// 初始化设置“结束”和“保存”按钮不可用
 	m_buttonStop.EnableWindow(FALSE);
 	m_buttonSave.EnableWindow(FALSE);
+	//m_ButtonPause.EnableWindow(FALSE);
 
 
 	// 初始化网络适配器列表
@@ -297,6 +298,7 @@ void CNetSnifferDlg::OnBnClickedButton1()
 	m_buttonRead.EnableWindow(FALSE);
 	m_buttonSave.EnableWindow(FALSE);
 	m_buttonSift.EnableWindow(FALSE);
+	//m_ButtonPause.EnableWindow(TRUE);
 }
 
 // 更新统计数据
@@ -625,6 +627,7 @@ void CNetSnifferDlg::OnBnClickedButton2()
 	this->m_buttonSave.EnableWindow(TRUE);
 	this->m_buttonRead.EnableWindow(TRUE);
 	this->m_buttonSift.EnableWindow(TRUE);
+	//this->m_ButtonPause.EnableWindow(FALSE);
 }
 
 //结束抓包后，按规则过滤已抓包内容
@@ -930,34 +933,32 @@ void CNetSnifferDlg::OnEnChangeEdit12()
 }
 
 
-// 暂停/继续
-void CNetSnifferDlg::OnBnClickedButton7()
-{
-	// TODO: 在此添加控件通知处理程序代码
-	CString buf;
-	m_ButtonPause.GetWindowText(buf);
-	auto state = CString2string(buf);
-	if (state !="继续") {
-		OnBnClickedButton2();
-		m_ButtonPause.SetWindowTextW(_T("继续"));
-	}
-	else {
-		
-		int status = m_snifferGrab.snif_startCap();
-		if (status == -1) {
-			printf("Error in snif_startCap\n");
-			return;
-		}
-		// 按钮状态
-		m_comboBox.EnableWindow(FALSE);
-		m_comboBoxRule.EnableWindow(FALSE);
-		m_buttonStart.EnableWindow(FALSE);
-		m_buttonStop.EnableWindow(TRUE);
-		m_buttonRead.EnableWindow(FALSE);
-		m_buttonSave.EnableWindow(FALSE);
-		m_buttonSift.EnableWindow(FALSE);
-		m_ButtonPause.SetWindowTextW(_T("暂停"));
-	}
-
-	
-}
+//// 暂停/继续
+//void CNetSnifferDlg::OnBnClickedButton7()
+//{
+//	// TODO: 在此添加控件通知处理程序代码
+//	CString buf;
+//	m_ButtonPause.GetWindowText(buf);
+//	auto state = CString2string(buf);
+//	if (state !="继续") {
+//		OnBnClickedButton2();
+//		m_ButtonPause.EnableWindow(TRUE);
+//		m_ButtonPause.SetWindowTextW(_T("继续"));
+//	}
+//	else {
+//		int status = m_snifferGrab.snif_startCap();
+//		if (status == -1) {
+//			printf("Error in snif_startCap\n");
+//			return;
+//		}
+//		// 按钮状态
+//		m_comboBox.EnableWindow(FALSE);
+//		m_comboBoxRule.EnableWindow(FALSE);
+//		m_buttonStart.EnableWindow(FALSE);
+//		m_buttonStop.EnableWindow(TRUE);
+//		m_buttonRead.EnableWindow(FALSE);
+//		m_buttonSave.EnableWindow(FALSE);
+//		m_buttonSift.EnableWindow(FALSE);
+//		m_ButtonPause.SetWindowTextW(_T("暂停"));
+//	}
+//}

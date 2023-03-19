@@ -257,7 +257,7 @@ DWORD __stdcall SnifferGrab::m_snif_CapThreadFun(LPVOID lpParameter)
 	int code = 0;
 	DataParser _parser;
 	_this->data_parser = _parser;
-	_this->setnpkt(0);
+	_this->setnpkt(0);//这一行可以注释掉
 	// 检索数据包,pcap_next_ex代替pcao_loop遍历
 	while ((code = pcap_next_ex(_this->getOpenedIfHandle(), &pkt_header, &pkt_data)) >= 0) {
 		// 将数据包保存在转储文件中

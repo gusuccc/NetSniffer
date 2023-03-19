@@ -77,7 +77,7 @@ public:
 	CButton m_buttonSave;
 	CButton m_buttonRead;
 	CButton m_buttonSift;
-	CButton m_ButtonPause;
+	//CButton m_ButtonPause;
 //规则过滤列表
 	CComboBox m_comboBoxRule;
 	CEdit m_EditRule;
@@ -92,6 +92,5 @@ public:
 	afx_msg void OnBnClickedButton4();
 	afx_msg void OnBnClickedButton6();
 	afx_msg void OnEnChangeEdit12();
-
-	afx_msg void OnBnClickedButton7();
+	//afx_msg void OnBnClickedButton7();
 };
